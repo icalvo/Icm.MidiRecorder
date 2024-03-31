@@ -3,7 +3,7 @@ using NAudio.Midi;
 
 namespace MidiRecorder.Application.Implementation;
 
-public class NAudioMidiSource : IMidiSource<MidiEventWithPort>
+public class NAudioMidiSource : IMidiSource<NAudioMidiEvent>
 {
     private readonly MidiIn[] _midiIns;
 
@@ -27,7 +27,7 @@ public class NAudioMidiSource : IMidiSource<MidiEventWithPort>
                                     non.NoteLength = 0;
                                 }
 
-                                return new MidiEventWithPort(eventClone, input.id);
+                                return new NAudioMidiEvent(eventClone, input.id);
                             });
                     return (midiIn, observable);
                 })
@@ -45,7 +45,7 @@ public class NAudioMidiSource : IMidiSource<MidiEventWithPort>
         }
     }
 
-    public IObservable<MidiEventWithPort> AllEvents { get; }
+    public IObservable<NAudioMidiEvent> AllEvents { get; }
 
     public void Dispose()
     {

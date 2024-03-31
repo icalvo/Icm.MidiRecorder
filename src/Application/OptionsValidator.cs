@@ -1,12 +1,11 @@
 using LanguageExt;
-using MidiRecorder.Application;
 
-namespace MidiRecorder.CommandLine;
+namespace MidiRecorder.Application;
 
 internal static class OptionsValidator
 {
     public static Validation<string, TypedRecordOptions> Validate(
-        this RecordOptions options,
+        this IRecordOptions options,
         Func<string, IEnumerable<(int, string)>> midiInputSearch,
         Func<string, Validation<string, Unit>> testFormat) =>
         options.MidiInputs

@@ -4,7 +4,7 @@ namespace MidiRecorder.Application.Implementation;
 
 public static class NAudioMidiFileSaver
 {
-    public static void Save(IEnumerable<IEnumerable<MidiEventWithPort>> tracks, string filePath, int timeDivision)
+    public static void Save(IEnumerable<IEnumerable<NAudioMidiEvent>> tracks, string filePath, int timeDivision)
     {
         var directory = Path.GetDirectoryName(filePath);
         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))

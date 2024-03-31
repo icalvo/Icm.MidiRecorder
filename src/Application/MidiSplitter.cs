@@ -23,7 +23,6 @@ public static class MidiSplitter
         // (The marker is at the end of such a pause)
         var heldNotesAndPedalsTimeoutMarkers =
             heldNotesAndPedals
-
                 .Throttle(timeToSaveAfterHeldEvents, scheduler)
                 .Where(x => x > 0)
                 .Select(_ => unit);

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace MidiRecorder.Application;
 
-public static class StringExt
+internal static class StringExt
 {
     public static string Format(string formatString, object data)
     {
@@ -30,7 +30,9 @@ public static class StringExt
                     nameof(propertyName));
             }
 
-            throw new ArgumentException($"Property {propertyName} not found.", nameof(propertyName));
+            var availableProperties = string.Join(", ", target.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Select(x => x.Name));
+            throw new ArgumentException($"Property {propertyName} not found. Should be one of: {availableProperties}", nameof(propertyName));
         }
 
         var (format, itemNames) = TranslateToStandardFormatString(formatString);

@@ -208,14 +208,14 @@ public class MidiSplitterTests
     {
         var events = new[]
         {
-            Recorded.OnNext(100, new MidiEventWithPort(new NoteOnEvent(100, 2, 96, 64, 444), 3)),
-            Recorded.OnNext(101, new MidiEventWithPort(new NoteOnEvent(100, 1, 96, 64, 555), 3)),
-            Recorded.OnNext(105, new MidiEventWithPort(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 96, 64), 3)),
-            Recorded.OnNext(106, new MidiEventWithPort(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 96, 64), 3)),
-            Recorded.OnNext(110, new MidiEventWithPort(new NoteOnEvent(100, 2, 95, 64, 666), 3)),
-            Recorded.OnNext(111, new MidiEventWithPort(new NoteOnEvent(100, 1, 95, 64, 777), 3)),
-            Recorded.OnNext(112, new MidiEventWithPort(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 95, 64), 3)),
-            Recorded.OnNext(113, new MidiEventWithPort(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 95, 64), 3)),
+            Recorded.OnNext(100, new NAudioMidiEvent(new NoteOnEvent(100, 2, 96, 64, 444), 3)),
+            Recorded.OnNext(101, new NAudioMidiEvent(new NoteOnEvent(100, 1, 96, 64, 555), 3)),
+            Recorded.OnNext(105, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 96, 64), 3)),
+            Recorded.OnNext(106, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 96, 64), 3)),
+            Recorded.OnNext(110, new NAudioMidiEvent(new NoteOnEvent(100, 2, 95, 64, 666), 3)),
+            Recorded.OnNext(111, new NAudioMidiEvent(new NoteOnEvent(100, 1, 95, 64, 777), 3)),
+            Recorded.OnNext(112, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 95, 64), 3)),
+            Recorded.OnNext(113, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 95, 64), 3)),
         };
 
         TimeSpan timeToSaveAfterHeldEvents = TimeSpan.FromTicks(30);
@@ -249,14 +249,14 @@ public class MidiSplitterTests
     {
         var events = new[]
         {
-            Recorded.OnNext(100, new MidiEventWithPort(new NoteOnEvent(100, 2, 96, 64, 444), 3)),
-            Recorded.OnNext(101, new MidiEventWithPort(new NoteOnEvent(100, 1, 96, 64, 555), 3)),
-            Recorded.OnNext(105, new MidiEventWithPort(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 96, 64), 3)),
-            Recorded.OnNext(106, new MidiEventWithPort(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 96, 64), 3)),
-            Recorded.OnNext(110, new MidiEventWithPort(new NoteOnEvent(100, 2, 95, 64, 666), 3)),
-            Recorded.OnNext(111, new MidiEventWithPort(new NoteOnEvent(100, 1, 95, 64, 777), 3)),
-            Recorded.OnNext(112, new MidiEventWithPort(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 95, 64), 3)),
-            Recorded.OnNext(113, new MidiEventWithPort(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 95, 64), 3)),
+            Recorded.OnNext(100, new NAudioMidiEvent(new NoteOnEvent(100, 2, 96, 64, 444), 3)),
+            Recorded.OnNext(101, new NAudioMidiEvent(new NoteOnEvent(100, 1, 96, 64, 555), 3)),
+            Recorded.OnNext(105, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 96, 64), 3)),
+            Recorded.OnNext(106, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 96, 64), 3)),
+            Recorded.OnNext(110, new NAudioMidiEvent(new NoteOnEvent(100, 2, 95, 64, 666), 3)),
+            Recorded.OnNext(111, new NAudioMidiEvent(new NoteOnEvent(100, 1, 95, 64, 777), 3)),
+            Recorded.OnNext(112, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 95, 64), 3)),
+            Recorded.OnNext(113, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 95, 64), 3)),
         };
 
         TimeSpan timeToSaveAfterHeldEvents = TimeSpan.FromTicks(30);
@@ -277,18 +277,49 @@ public class MidiSplitterTests
     }
 
     [TestMethod]
+    public void ExpectedHeldTimeoutAndAllOffSavingPoints()
+    {
+        var events = new[]
+        {
+            Recorded.OnNext(100, new NAudioMidiEvent(new NoteOnEvent(100, 2, 96, 64, 444), 3)),
+            Recorded.OnNext(101, new NAudioMidiEvent(new NoteOnEvent(100, 1, 96, 64, 555), 3)),
+            Recorded.OnNext(140, new NAudioMidiEvent(new NoteOnEvent(100, 2, 95, 64, 666), 3)),
+            Recorded.OnNext(141, new NAudioMidiEvent(new NoteOnEvent(100, 1, 95, 64, 777), 3)),
+            Recorded.OnNext(142, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 95, 64), 3)),
+            Recorded.OnNext(143, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 95, 64), 3)),
+        };
+
+        TimeSpan timeToSaveAfterHeldEvents = TimeSpan.FromTicks(30);
+        TimeSpan timeToSaveAfterAllOff = TimeSpan.FromTicks(15);
+
+        var scheduler = new TestScheduler();
+        var sut = CreateSplit(scheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff, NAudioMidiEventAnalyzer.NoteAndSustainPedalCount);
+
+        var result = sut.SavingPoints;
+
+        var result2 = PrepareResultBottom(result, scheduler);
+        result2.Should()
+            .BeEquivalentTo(
+                new[]
+                {
+                    Recorded.Create(101+30+1, "()"),
+                    Recorded.Create(143+15+1, "()"),
+                });
+    }
+    
+    [TestMethod]
     public void RegressionTest()
     {
         var events = new[]
         {
-            Recorded.OnNext(100, new MidiEventWithPort(new NoteOnEvent(100, 2, 96, 64, 444), 3)),
-            Recorded.OnNext(101, new MidiEventWithPort(new NoteOnEvent(100, 1, 96, 64, 555), 3)),
-            Recorded.OnNext(105, new MidiEventWithPort(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 96, 64), 3)),
-            Recorded.OnNext(106, new MidiEventWithPort(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 96, 64), 3)),
-            Recorded.OnNext(127, new MidiEventWithPort(new NoteOnEvent(100, 2, 95, 64, 666), 3)),
-            Recorded.OnNext(128, new MidiEventWithPort(new NoteOnEvent(100, 1, 95, 64, 777), 3)),
-            Recorded.OnNext(129, new MidiEventWithPort(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 95, 64), 3)),
-            Recorded.OnNext(130, new MidiEventWithPort(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 95, 64), 3)),
+            Recorded.OnNext(100, new NAudioMidiEvent(new NoteOnEvent(100, 2, 96, 64, 444), 3)),
+            Recorded.OnNext(101, new NAudioMidiEvent(new NoteOnEvent(100, 1, 96, 64, 555), 3)),
+            Recorded.OnNext(105, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 96, 64), 3)),
+            Recorded.OnNext(106, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 96, 64), 3)),
+            Recorded.OnNext(127, new NAudioMidiEvent(new NoteOnEvent(100, 2, 95, 64, 666), 3)),
+            Recorded.OnNext(128, new NAudioMidiEvent(new NoteOnEvent(100, 1, 95, 64, 777), 3)),
+            Recorded.OnNext(129, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 95, 64), 3)),
+            Recorded.OnNext(130, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 95, 64), 3)),
         };
 
         TimeSpan timeToSaveAfterHeldEvents = TimeSpan.FromTicks(20);
@@ -315,7 +346,7 @@ public class MidiSplitterTests
                     Array.Empty<Recorded<string>>()
                 });
 
-        MidiSplit<MidiEventWithPort> CreateSplitAux(TestScheduler testScheduler) =>
+        MidiSplit<NAudioMidiEvent> CreateSplitAux(TestScheduler testScheduler) =>
             CreateSplit(testScheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff, NAudioMidiEventAnalyzer.NoteAndSustainPedalCount);
     }
 

@@ -4,7 +4,7 @@ namespace MidiRecorder.Application.Implementation;
 
 public static class NAudioMidiEventAnalyzer
 {
-    public static int NoteAndSustainPedalCount(MidiEventWithPort midiEvent)
+    public static int NoteAndSustainPedalCount(NAudioMidiEvent midiEvent)
     {
         return midiEvent.MidiEvent switch
         {
@@ -16,7 +16,7 @@ public static class NAudioMidiEventAnalyzer
         };
     }
 
-    public static bool IsNote(MidiEventWithPort midiEvent)
+    public static bool IsNote(NAudioMidiEvent midiEvent)
     {
         return midiEvent.MidiEvent is NoteEvent;
     }

@@ -11,6 +11,6 @@ public class TrackBuilderTests
     [TestMethod(displayName:"Regression for #17")]
     public void Test()
     {
-        NAudioMidiTrackBuilder.BuildTracks(Array.Empty<MidiEventWithPort>()).Should().BeEmpty();
+        NAudioMidiTrackBuilder.BuildTracks(Array.Empty<NAudioMidiEvent>()).Should().BeEmpty();
     }    
 }

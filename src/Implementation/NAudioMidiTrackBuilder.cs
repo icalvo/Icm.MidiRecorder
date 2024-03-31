@@ -4,16 +4,16 @@ namespace MidiRecorder.Application.Implementation;
 
 public static class NAudioMidiTrackBuilder
 {
-    public static IEnumerable<IEnumerable<MidiEventWithPort>> BuildTracks(IEnumerable<MidiEventWithPort> midiEvents)
+    public static IEnumerable<IEnumerable<NAudioMidiEvent>> BuildTracks(IEnumerable<NAudioMidiEvent> midiEvents)
     {
         var events = midiEvents.ToArray();
         if (events.Length == 0)
         {
-            return Enumerable.Empty<IEnumerable<MidiEventWithPort>>();
+            return Enumerable.Empty<IEnumerable<NAudioMidiEvent>>();
         }
 
         var firstTime = events[0].MidiEvent.AbsoluteTime;
-        foreach (MidiEventWithPort midiEvent in events)
+        foreach (NAudioMidiEvent midiEvent in events)
         {
             midiEvent.MidiEvent.AbsoluteTime -= firstTime;
         }
@@ -26,9 +26,9 @@ public static class NAudioMidiTrackBuilder
             select x;
     }
 
-    private static MidiEventWithPort EndOfTrackMarker(IEnumerable<MidiEventWithPort> track)
+    private static NAudioMidiEvent EndOfTrackMarker(IEnumerable<NAudioMidiEvent> track)
     {
-        return new MidiEventWithPort(
+        return new NAudioMidiEvent(
             new MetaEvent(MetaEventType.EndTrack, 0, track.Last().MidiEvent.AbsoluteTime + 1),
             0);
     }

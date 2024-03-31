@@ -7,9 +7,9 @@ public static class NAudioMidiFormatTester
 {
     public static Validation<string, Unit> TestFormat(
         string pathFormatString,
-        Func<MidiEventWithPort, bool> isNote)
+        Func<NAudioMidiEvent, bool> isNote)
     {
-        var eventList = new[] { new MidiEventWithPort(new NoteOnEvent(11, 1, 78, 34, 333), 0) };
+        var eventList = new[] { new NAudioMidiEvent(new NoteOnEvent(11, 1, 78, 34, 333), 0) };
         
         try
         {

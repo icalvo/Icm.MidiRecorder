@@ -1,13 +1,14 @@
 using System.Diagnostics.CodeAnalysis;
 using CommandLine;
 using CommandLine.Text;
+using MidiRecorder.Application;
 
 namespace MidiRecorder.CommandLine;
 
 [SuppressMessage("ReSharper", "UnusedType.Global")]
 [SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
 [Verb("record", true, HelpText = "Records MIDI to files")]
-public class RecordOptions
+public class RecordOptions : IRecordOptions
 {
     public RecordOptions(IEnumerable<string> midiInputs, long delayToSave, string pathFormatString, int midiResolution)
     {
