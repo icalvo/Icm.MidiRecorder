@@ -7,12 +7,20 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MidiRecorder.Application;
 using MidiRecorder.Application.Implementation;
 using NAudio.Midi;
+using static LanguageExt.Prelude;
+using Array = System.Array;
 
 namespace MidiRecorder.Tests;
 
 [TestClass]
 public class MidiSplitterTests
 {
+    [TestInitialize]
+    public void TestInit()
+    {
+        AssertionOptions.AssertEquivalencyUsing(o => o.WithStrictOrdering());
+    }
+
     [TestMethod]
     public void Split_SingleGroupTest()
     {
@@ -29,7 +37,7 @@ public class MidiSplitterTests
         var scheduler = new TestScheduler();
         var sut = CreateSplit(scheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff);
 
-        var result2 = Record(sut, scheduler).SplitGroups;
+        var result2 = sut.SplitGroups.RecordTwoLevels(scheduler);
         result2.Should()
             .BeEquivalentTo(
                 new[]
@@ -61,7 +69,7 @@ public class MidiSplitterTests
         var scheduler = new TestScheduler();
         var sut = CreateSplit(scheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff);
 
-        var result2 = Record(sut, scheduler).SplitGroups;
+        var result2 = sut.SplitGroups.RecordTwoLevels(scheduler);
         result2.Should()
             .BeEquivalentTo(
                 new[]
@@ -94,7 +102,7 @@ public class MidiSplitterTests
         var scheduler = new TestScheduler();
         var sut = CreateSplit(scheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff);
 
-        var result2 = Record(sut, scheduler).SplitGroups;
+        var result2 = sut.SplitGroups.RecordTwoLevels(scheduler);
         result2.Should()
             .BeEquivalentTo(
                 new[]
@@ -139,7 +147,7 @@ public class MidiSplitterTests
         var scheduler = new TestScheduler();
         var sut = CreateSplit(scheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff);
 
-        var result2 = Record(sut, scheduler).SplitGroups;
+        var result2 = sut.SplitGroups.RecordTwoLevels(scheduler);
         result2.Should()
             .BeEquivalentTo(
                 new[]
@@ -183,7 +191,7 @@ public class MidiSplitterTests
         var scheduler = new TestScheduler();
         var sut = CreateSplit(scheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff);
 
-        var result2 = Record(sut, scheduler).SplitGroups;
+        var result2 = sut.SplitGroups.RecordTwoLevels(scheduler);
         result2.Should()
             .BeEquivalentTo(
                 new[]
@@ -208,14 +216,14 @@ public class MidiSplitterTests
     {
         var events = new[]
         {
-            Recorded.OnNext(100, new NAudioMidiEvent(new NoteOnEvent(100, 2, 96, 64, 444), 3)),
-            Recorded.OnNext(101, new NAudioMidiEvent(new NoteOnEvent(100, 1, 96, 64, 555), 3)),
-            Recorded.OnNext(105, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 96, 64), 3)),
-            Recorded.OnNext(106, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 96, 64), 3)),
-            Recorded.OnNext(110, new NAudioMidiEvent(new NoteOnEvent(100, 2, 95, 64, 666), 3)),
-            Recorded.OnNext(111, new NAudioMidiEvent(new NoteOnEvent(100, 1, 95, 64, 777), 3)),
-            Recorded.OnNext(112, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 95, 64), 3)),
-            Recorded.OnNext(113, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 95, 64), 3)),
+            Recorded.OnNext(100, Events.NoteOn(2, 96, 64, 3)),
+            Recorded.OnNext(101, Events.NoteOn(1, 96, 64, 3)),
+            Recorded.OnNext(105, Events.NoteOff(2, 96, 64, 3)),
+            Recorded.OnNext(106, Events.NoteOff(1, 96, 64, 3)),
+            Recorded.OnNext(110, Events.NoteOn(2, 95, 64, 3)),
+            Recorded.OnNext(111, Events.NoteOn(1, 95, 64, 3)),
+            Recorded.OnNext(112, Events.NoteOff(2, 95, 64, 3)),
+            Recorded.OnNext(113, Events.NoteOff(1, 95, 64, 3)),
         };
 
         TimeSpan timeToSaveAfterHeldEvents = TimeSpan.FromTicks(30);
@@ -224,7 +232,7 @@ public class MidiSplitterTests
         var scheduler = new TestScheduler();
         var sut = CreateSplit(scheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff, NAudioMidiEventAnalyzer.NoteAndSustainPedalCount);
 
-        var splitGroups = Record(sut, scheduler).SplitGroups;
+        var splitGroups = sut.SplitGroups.RecordTwoLevels(scheduler);
 
         splitGroups.Should()
             .BeEquivalentTo(
@@ -232,11 +240,11 @@ public class MidiSplitterTests
                 {
                     [
                         Recorded.Create(100, "P3 100 NoteOn Ch: 2 C8 Vel:64 Len: 444"),
-                        Recorded.Create(101, "P3 100 NoteOn Ch: 1 C8 Vel:64 Len: 555"),
+                        Recorded.Create(101, "P3 100 NoteOn Ch: 1 C8 Vel:64 Len: 444"),
                         Recorded.Create(105, "P3 100 NoteOff Ch: 2 C8 Vel:64"),
                         Recorded.Create(106, "P3 100 NoteOff Ch: 1 C8 Vel:64"),
-                        Recorded.Create(110, "P3 100 NoteOn Ch: 2 B7 Vel:64 Len: 666"),
-                        Recorded.Create(111, "P3 100 NoteOn Ch: 1 B7 Vel:64 Len: 777"),
+                        Recorded.Create(110, "P3 100 NoteOn Ch: 2 B7 Vel:64 Len: 444"),
+                        Recorded.Create(111, "P3 100 NoteOn Ch: 1 B7 Vel:64 Len: 444"),
                         Recorded.Create(112, "P3 100 NoteOff Ch: 2 B7 Vel:64"),
                         Recorded.Create(113, "P3 100 NoteOff Ch: 1 B7 Vel:64")
                     ],
@@ -249,14 +257,14 @@ public class MidiSplitterTests
     {
         var events = new[]
         {
-            Recorded.OnNext(100, new NAudioMidiEvent(new NoteOnEvent(100, 2, 96, 64, 444), 3)),
-            Recorded.OnNext(101, new NAudioMidiEvent(new NoteOnEvent(100, 1, 96, 64, 555), 3)),
-            Recorded.OnNext(105, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 96, 64), 3)),
-            Recorded.OnNext(106, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 96, 64), 3)),
-            Recorded.OnNext(110, new NAudioMidiEvent(new NoteOnEvent(100, 2, 95, 64, 666), 3)),
-            Recorded.OnNext(111, new NAudioMidiEvent(new NoteOnEvent(100, 1, 95, 64, 777), 3)),
-            Recorded.OnNext(112, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 95, 64), 3)),
-            Recorded.OnNext(113, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 95, 64), 3)),
+            Recorded.OnNext(100, Events.NoteOn(2, 96, 64, 3)),
+            Recorded.OnNext(101, Events.NoteOn(1, 96, 64, 3)),
+            Recorded.OnNext(105, Events.NoteOff(2, 96, 64, 3)),
+            Recorded.OnNext(106, Events.NoteOff(1, 96, 64, 3)),
+            Recorded.OnNext(110, Events.NoteOn(2, 95, 64, 3)),
+            Recorded.OnNext(111, Events.NoteOn(1, 95, 64, 3)),
+            Recorded.OnNext(112, Events.NoteOff(2, 95, 64, 3)),
+            Recorded.OnNext(113, Events.NoteOff(1, 95, 64, 3)),
         };
 
         TimeSpan timeToSaveAfterHeldEvents = TimeSpan.FromTicks(30);
@@ -265,14 +273,12 @@ public class MidiSplitterTests
         var scheduler = new TestScheduler();
         var sut = CreateSplit(scheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff, NAudioMidiEventAnalyzer.NoteAndSustainPedalCount);
 
-        var result = sut.SavingPoints;
-
-        var result2 = PrepareResultBottom(result, scheduler);
-        result2.Should()
+        var result = sut.SavingPoints.Record(scheduler);
+        result.Should()
             .BeEquivalentTo(
                 new[]
                 {
-                    Recorded.Create(events.Last().Time + timeToSaveAfterAllOff.Ticks + 1, "()"),
+                    Recorded.Create(events.Last().Time + timeToSaveAfterAllOff.Ticks, unit),
                 });
     }
 
@@ -281,29 +287,29 @@ public class MidiSplitterTests
     {
         var events = new[]
         {
-            Recorded.OnNext(100, new NAudioMidiEvent(new NoteOnEvent(100, 2, 96, 64, 444), 3)),
-            Recorded.OnNext(101, new NAudioMidiEvent(new NoteOnEvent(100, 1, 96, 64, 555), 3)),
-            Recorded.OnNext(140, new NAudioMidiEvent(new NoteOnEvent(100, 2, 95, 64, 666), 3)),
-            Recorded.OnNext(141, new NAudioMidiEvent(new NoteOnEvent(100, 1, 95, 64, 777), 3)),
-            Recorded.OnNext(142, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 95, 64), 3)),
-            Recorded.OnNext(143, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 95, 64), 3)),
+            Recorded.OnNext(100, Events.NoteOn(2, 96, 64, 3)),
+            Recorded.OnNext(101, Events.NoteOn(1, 96, 64, 3)),
+            Recorded.OnNext(140, Events.NoteOn(2, 95, 64, 3)),
+            Recorded.OnNext(141, Events.NoteOn(1, 95, 64, 3)),
+            Recorded.OnNext(142, Events.NoteOff(2, 95, 64, 3)),
+            Recorded.OnNext(143, Events.NoteOff(1, 95, 64, 3)),
         };
 
         TimeSpan timeToSaveAfterHeldEvents = TimeSpan.FromTicks(30);
-        TimeSpan timeToSaveAfterAllOff = TimeSpan.FromTicks(15);
+        TimeSpan timeToSaveAfterAllOff = TimeSpan.FromTicks(16);
 
         var scheduler = new TestScheduler();
         var sut = CreateSplit(scheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff, NAudioMidiEventAnalyzer.NoteAndSustainPedalCount);
 
-        var result = sut.SavingPoints;
-
-        var result2 = PrepareResultBottom(result, scheduler);
-        result2.Should()
+        var result = sut.SavingPoints.Record(scheduler);
+        result.Should()
             .BeEquivalentTo(
                 new[]
                 {
-                    Recorded.Create(101+30+1, "()"),
-                    Recorded.Create(143+15+1, "()"),
+                    Recorded.Create(101+30, unit),
+                    Recorded.Create(101+30+16, unit),
+                    Recorded.Create(143+30, unit),
+                    Recorded.Create(143+30+16, unit),
                 });
     }
     
@@ -312,14 +318,14 @@ public class MidiSplitterTests
     {
         var events = new[]
         {
-            Recorded.OnNext(100, new NAudioMidiEvent(new NoteOnEvent(100, 2, 96, 64, 444), 3)),
-            Recorded.OnNext(101, new NAudioMidiEvent(new NoteOnEvent(100, 1, 96, 64, 555), 3)),
-            Recorded.OnNext(105, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 96, 64), 3)),
-            Recorded.OnNext(106, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 96, 64), 3)),
-            Recorded.OnNext(127, new NAudioMidiEvent(new NoteOnEvent(100, 2, 95, 64, 666), 3)),
-            Recorded.OnNext(128, new NAudioMidiEvent(new NoteOnEvent(100, 1, 95, 64, 777), 3)),
-            Recorded.OnNext(129, new NAudioMidiEvent(new NoteEvent(100, 2, MidiCommandCode.NoteOff, 95, 64), 3)),
-            Recorded.OnNext(130, new NAudioMidiEvent(new NoteEvent(100, 1, MidiCommandCode.NoteOff, 95, 64), 3)),
+            Recorded.OnNext(100, Events.NoteOn(2, 96, 64, 3)),
+            Recorded.OnNext(101, Events.NoteOn(1, 96, 64, 3)),
+            Recorded.OnNext(105, Events.NoteOff(2, 96, 64, 3)),
+            Recorded.OnNext(106, Events.NoteOff(1, 96, 64, 3)),
+            Recorded.OnNext(127, Events.NoteOn(2, 95, 64, 3)),
+            Recorded.OnNext(128, Events.NoteOn(1, 95, 64, 3)),
+            Recorded.OnNext(129, Events.NoteOff(2, 95, 64, 3)),
+            Recorded.OnNext(130, Events.NoteOff(1, 95, 64, 3)),
         };
 
         TimeSpan timeToSaveAfterHeldEvents = TimeSpan.FromTicks(20);
@@ -328,18 +334,18 @@ public class MidiSplitterTests
         var scheduler = new TestScheduler();
         var sut = CreateSplitAux(scheduler);
 
-        var result2 = Record(sut, scheduler).SplitGroups;
-        result2.Should()
+        var result = sut.SplitGroups.RecordTwoLevels(scheduler);
+        result.Should()
             .BeEquivalentTo(
                 new[]
                 {
                     [
                         Recorded.Create(100, "P3 100 NoteOn Ch: 2 C8 Vel:64 Len: 444"),
-                        Recorded.Create(101, "P3 100 NoteOn Ch: 1 C8 Vel:64 Len: 555"),
+                        Recorded.Create(101, "P3 100 NoteOn Ch: 1 C8 Vel:64 Len: 444"),
                         Recorded.Create(105, "P3 100 NoteOff Ch: 2 C8 Vel:64"),
                         Recorded.Create(106, "P3 100 NoteOff Ch: 1 C8 Vel:64"),
-                        Recorded.Create(127, "P3 100 NoteOn Ch: 2 B7 Vel:64 Len: 666"),
-                        Recorded.Create(128, "P3 100 NoteOn Ch: 1 B7 Vel:64 Len: 777"),
+                        Recorded.Create(127, "P3 100 NoteOn Ch: 2 B7 Vel:64 Len: 444"),
+                        Recorded.Create(128, "P3 100 NoteOn Ch: 1 B7 Vel:64 Len: 444"),
                         Recorded.Create(129, "P3 100 NoteOff Ch: 2 B7 Vel:64"),
                         Recorded.Create(130, "P3 100 NoteOff Ch: 1 B7 Vel:64")
                     ],
@@ -350,7 +356,100 @@ public class MidiSplitterTests
             CreateSplit(testScheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff, NAudioMidiEventAnalyzer.NoteAndSustainPedalCount);
     }
 
-    private static RecordedSplit<T> Record<T>(MidiSplit<T> split, TestScheduler scheduler) => new (split, scheduler);
+    [TestMethod]
+    public void Split_HeldNotesAndPedalsTimeoutMarkers()
+    {
+        var events = new[]
+        {
+            Recorded.OnNext(100, Events.NoteOn(2, 96, 64, 3)),
+            Recorded.OnNext(101, Events.NoteOn(1, 96, 64, 3)),
+            Recorded.OnNext(106, Events.NoteOff(1, 96, 64, 3)),
+            Recorded.OnNext(129, Events.NoteOn(2, 95, 64, 3)),
+            Recorded.OnNext(130, Events.NoteOn(1, 95, 64, 3)),
+            Recorded.OnNext(131, Events.NoteOff(2, 95, 64, 3)),
+            Recorded.OnNext(132, Events.NoteOff(1, 95, 64, 3)),
+        };
+
+        TimeSpan timeToSaveAfterHeldEvents = TimeSpan.FromTicks(20);
+        TimeSpan timeToSaveAfterAllOff = TimeSpan.FromTicks(30);
+
+        var scheduler = new TestScheduler();
+        var sut = CreateSplitAux(scheduler);
+
+        var result2 = sut.HeldNotesAndPedalsTimeoutMarkers.Record(scheduler);
+        result2.Should().BeEquivalentTo(new[]
+        {
+            Recorded.Create(106 + 20, unit),
+            Recorded.Create(132 + 20, unit),
+        });
+        return;
+
+        MidiSplit<NAudioMidiEvent> CreateSplitAux(TestScheduler testScheduler) =>
+            CreateSplit(testScheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff, NAudioMidiEventAnalyzer.NoteAndSustainPedalCount);
+    }
+
+    [TestMethod]
+    public void Split_HeldNotesAndPedalsTimeoutMarkers_Negative()
+    {
+        var events = new[]
+        {
+            Recorded.OnNext(100, Events.NoteOn(2, 96, 64, 3)),
+            Recorded.OnNext(101, Events.NoteOn(1, 96, 64, 3)),
+            Recorded.OnNext(105, Events.NoteOff(2, 96, 64, 3)),
+            Recorded.OnNext(106, Events.NoteOff(1, 96, 64, 3)),
+            Recorded.OnNext(127, Events.NoteOn(2, 95, 64, 3)),
+            Recorded.OnNext(128, Events.NoteOn(1, 95, 64, 3)),
+            Recorded.OnNext(129, Events.NoteOff(2, 95, 64, 3)),
+            Recorded.OnNext(130, Events.NoteOff(1, 95, 64, 3)),
+        };
+
+        TimeSpan timeToSaveAfterHeldEvents = TimeSpan.FromTicks(20);
+        TimeSpan timeToSaveAfterAllOff = TimeSpan.FromTicks(30);
+
+        var scheduler = new TestScheduler();
+        var sut = CreateSplitAux(scheduler);
+
+        var result2 = sut.HeldNotesAndPedalsTimeoutMarkers.Record(scheduler);
+        result2.Should().BeEmpty();
+        return;
+
+        MidiSplit<NAudioMidiEvent> CreateSplitAux(TestScheduler testScheduler) =>
+            CreateSplit(testScheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff, NAudioMidiEventAnalyzer.NoteAndSustainPedalCount);
+    }
+
+    [TestMethod]
+    public void Split_AdjustedReleaseMarkers()
+    {
+        var events = new[]
+        {
+            Recorded.OnNext(100, Events.NoteOn(2, 96, 64, 3)),
+            Recorded.OnNext(101, Events.NoteOn(1, 96, 64, 3)),
+            Recorded.OnNext(105, Events.NoteOff(2, 96, 64, 3)),
+            Recorded.OnNext(106, Events.NoteOff(1, 96, 64, 3)),
+            Recorded.OnNext(127, Events.NoteOn(2, 95, 64, 3)),
+            Recorded.OnNext(128, Events.NoteOn(1, 95, 64, 3)),
+            Recorded.OnNext(129, Events.NoteOff(2, 95, 64, 3)),
+            Recorded.OnNext(130, Events.NoteOff(1, 95, 64, 3)),
+        };
+
+        TimeSpan timeToSaveAfterHeldEvents = TimeSpan.FromTicks(20);
+        TimeSpan timeToSaveAfterAllOff = TimeSpan.FromTicks(30);
+
+        var scheduler = new TestScheduler();
+        var sut = CreateSplitAux(scheduler);
+
+        var result2 = sut.AdjustedReleaseMarkers.Record(scheduler);
+        result2.Should()
+            .BeEquivalentTo(new[]
+            {
+                Recorded.Create(106, unit),
+                Recorded.Create(130, unit),
+            });
+        return;
+
+        MidiSplit<NAudioMidiEvent> CreateSplitAux(TestScheduler testScheduler) =>
+            CreateSplit(testScheduler, events, timeToSaveAfterHeldEvents, timeToSaveAfterAllOff, NAudioMidiEventAnalyzer.NoteAndSustainPedalCount);
+    }
 
     private static MidiSplit<string> CreateSplit(
         TestScheduler scheduler,
@@ -373,14 +472,14 @@ public class MidiSplitterTests
         return split;
     }
 
-    private static Recorded<string>[] PrepareResultBottom<T>(IObservable<T> result, TestScheduler scheduler) =>
-        result
-            .WaitAndGetRecorded(scheduler)
-            .Select(x => new Recorded<string>(x.Time, x.Value?.ToString() ?? ""))
-            .ToArray();
-
     private static int NoteAndSustainPedalCount(string s)
     {
         return int.Parse(s.Trim().Split(' ')[0]);
     }
+}
+
+public static class Events
+{
+    public static NAudioMidiEvent NoteOn(int channel, int noteNumber, int velocity, int port) => new(new NoteOnEvent(100, channel, noteNumber, velocity, 444), port);
+    public static NAudioMidiEvent NoteOff(int channel, int noteNumber, int velocity, int port) => new(new NoteEvent(100, channel, MidiCommandCode.NoteOff, noteNumber, velocity), port);
 }

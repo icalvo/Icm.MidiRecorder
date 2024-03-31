@@ -1,4 +1,5 @@
 using System.Reactive.Linq;
+using System.Reflection;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
 
@@ -45,37 +46,40 @@ public class ApplicationService<TMidiEvent> where TMidiEvent : IMidiEvent
                     return 0;
                 });
 
-    public int Record(IRecordOptions options) =>
-        options
-            .Validate(
-                _searchMidiInputId,
-                x => _testFormat(x, _isNote))
+    public int Record(IRecordOptions options)
+    {
+        var product = AssemblyExtensions.Get<AssemblyProductAttribute>()?.Product;
+        var version = AssemblyExtensions.Get<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+    
+        _logger.LogInformation("{Product} {ProgramVersion}", product, version);
+
+        return options.Validate(_searchMidiInputId, x => _testFormat(x, _isNote))
             .Match(
                 typedOptions =>
                 {
-                    _ = typedOptions.MidiInputs.Iter(input =>
-                        _logger.LogInformation("Using MIDI input {MidiInputId} ({MidiInputName})", input.id, input.name));
+                    _ = typedOptions.MidiInputs.Iter(
+                        input => _logger.LogInformation(
+                            "Using MIDI input {MidiInputId} ({MidiInputName})",
+                            input.id,
+                            input.name));
                     var source = _buildMidiSource(typedOptions);
                     PrintOptions(typedOptions, _logger);
                     var allEvents = source.AllEvents;
 
-                    NoteDuration.CalculateDurations(
-                        allEvents,
-                        x => x.IsNoteOn,
-                        x => x.IsNoteOff,
-                        x => x.NoteNumber)
-                        .ForEachAsync(x =>
-                        {
-                            if (x.duration == TimeSpan.Zero)
+                    NoteDuration.CalculateDurations(allEvents, x => x.IsNoteOn, x => x.IsNoteOff, x => x.NoteNumber)
+                        .ForEachAsync(
+                            x =>
                             {
-                                _logger.LogTrace("{MidiEvent}", x.ev);
-                            }
-                            else
-                            {
-                                _logger.LogTrace(@"{MidiEvent} Dur: {Duration:s\.ff}s", x.ev, x.duration);
-                            }
-                        });
-                    
+                                if (x.duration == TimeSpan.Zero)
+                                {
+                                    _logger.LogTrace("{MidiEvent}", x.ev);
+                                }
+                                else
+                                {
+                                    _logger.LogTrace(@"{MidiEvent} Dur: {Duration:s\.ff}s", x.ev, x.duration);
+                                }
+                            });
+
                     var split = MidiSplitter.Split(
                         allEvents,
                         _noteAndSustainPedalCount,
@@ -83,48 +87,49 @@ public class ApplicationService<TMidiEvent> where TMidiEvent : IMidiEvent
                         typedOptions.DelayToSave);
 
                     _ = split.AdjustedReleaseMarkers.ForEachAsync(_ => _logger.LogTrace("All Notes/Pedals Off!"));
-                    _ = split.SplitGroups
-                        .SelectMany(x =>x
-                            .ToArray()
-                            .Where(midiEvents => midiEvents.Length > 0)
-                            .Select(
-                                midiEvents =>
+                    _ = split.SplitGroups.SelectMany(
+                            x => x.ToArray()
+                                .Where(midiEvents => midiEvents.Length > 0)
+                                .Select(
+                                    midiEvents =>
+                                    {
+                                        var filePath = MidiFileContext.BuildFilePath(
+                                            typedOptions.PathFormatString,
+                                            midiEvents,
+                                            DateTime.Now,
+                                            Guid.NewGuid(),
+                                            _isNote);
+                                        var tracks = _buildTracks(midiEvents);
+                                        return (tracks, filePath);
+                                    }))
+                        .ForEachAsync(
+                            x =>
+                            {
+                                _logger.LogInformation(
+                                    "Saving {EventCount} events to file {FilePath}...",
+                                    x.tracks.Sum(y => y.Count()) - x.tracks.Count(),
+                                    x.filePath);
+                                try
                                 {
-                                    var filePath = MidiFileContext.BuildFilePath(
-                                        typedOptions.PathFormatString,
-                                        midiEvents,
-                                        DateTime.Now,
-                                        Guid.NewGuid(),
-                                        _isNote);
-                                    var tracks = _buildTracks(midiEvents);
-                                    return (tracks, filePath);
-                                }))
-                        .ForEachAsync(x =>
-                        {
-                            _logger.LogInformation(
-                                "Saving {EventCount} events (plus 1 EndOfTrack) to file {FilePath}...",
-                                x.tracks.Sum(y => y.Count()) - 1,
-                                x.filePath);
-                            try
-                            {
-                                _save(x.tracks, x.filePath, typedOptions.MidiResolution);
-                            }
-    #pragma warning disable CA1031
-                            catch (Exception ex)
-    #pragma warning restore CA1031
-                            {
-                                _logger.LogError(ex, "There was an error when saving the file");
-                            }
-                        });
+                                    _save(x.tracks, x.filePath, typedOptions.MidiResolution);
+                                }
+#pragma warning disable CA1031
+                                catch (Exception ex)
+#pragma warning restore CA1031
+                                {
+                                    _logger.LogError(ex, "There was an error when saving the file");
+                                }
+                            });
 
-                    
+
                     source.StartReceiving();
-                    
+
                     _logger.LogInformation("Recording started, Press any key to quit");
                     Console.ReadLine();
                     return 0;
                 },
                 _handleError);
+    }
 
     private static void PrintOptions(TypedRecordOptions options, ILogger logger)
     {
@@ -135,5 +140,17 @@ public class ApplicationService<TMidiEvent> where TMidiEvent : IMidiEvent
         logger.LogInformation("Timeout to save: {TimeoutToSave}", timeToSaveAfterHeldEvents);
         logger.LogInformation("Output Path: {PathFormatString}", pathFormatString);
         logger.LogInformation("MIDI resolution: {MidiResolution}", midiResolution);
+    }
+}
+
+
+public static class AssemblyExtensions
+{
+    public static TAttribute? Get<TAttribute>() where TAttribute : Attribute
+    {
+        return Assembly.GetEntryAssembly()
+            ?.GetCustomAttributes(typeof(TAttribute), false)
+            .OfType<TAttribute>()
+            .FirstOrDefault();
     }
 }

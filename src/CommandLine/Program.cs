@@ -8,6 +8,7 @@ using MidiRecorder.Application;
 using MidiRecorder.Application.Implementation;
 using MidiRecorder.CommandLine;
 using MidiRecorder.CommandLine.Logging;
+using AssemblyExtensions = MidiRecorder.Application.AssemblyExtensions;
 
 const string environmentVarPrefix = "MidiRecorder_";
 IConfigurationRoot config = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, false)
@@ -47,7 +48,7 @@ try
             DisplayHelp(parserResult, Enumerable.Empty<Error>());
             return 1;
         });
-    return parserResult.MapResult<RecordOptions, ListMidiInputsOptions, int>(
+    return parserResult.MapResult<IRecordOptions, ListMidiInputsOptions, int>(
         appService.Record,
         _ => appService.ListMidiInputs(),
         errors => DisplayHelp(parserResult, errors));
@@ -87,11 +88,7 @@ static int DisplayHelp<T>(ParserResult<T> result, IEnumerable<Error> errors)
             h =>
             {
                 h.AdditionalNewLineAfterOption = false;
-                var assemblyDescription = Assembly.GetExecutingAssembly()
-                    .GetCustomAttributes(typeof(AssemblyDescriptionAttribute), false)
-                    .OfType<AssemblyDescriptionAttribute>()
-                    .FirstOrDefault()
-                    ?.Description;
+                var assemblyDescription = AssemblyExtensions.Get<AssemblyDescriptionAttribute>()?.Description;
                 if (errs.IsHelp())
                 {
                     h.AddPreOptionsLine(assemblyDescription);
