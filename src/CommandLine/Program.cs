@@ -36,10 +36,8 @@ try
         NAudioMidiInputs.GetMidiInputs,
         loggerFactory.CreateLogger<ApplicationService<NAudioMidiEvent>>(),
         NAudioMidiInputs.SearchMidiInputId,
-        NAudioMidiEventAnalyzer.IsNote,
         NAudioMidiFormatTester.TestFormat,
         o => new NAudioMidiSource(o),
-        NAudioMidiEventAnalyzer.NoteAndSustainPedalCount,
         NAudioMidiTrackBuilder.BuildTracks,
         NAudioMidiFileSaver.Save,
         errorMessage =>

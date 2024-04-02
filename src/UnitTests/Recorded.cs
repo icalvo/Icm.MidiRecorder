@@ -1,3 +1,4 @@
+using System;
 using System.Reactive;
 using Microsoft.Reactive.Testing;
 
@@ -18,5 +19,10 @@ public static class Recorded
     public static Recorded<Notification<T>> Complete<T>(long time)
     {
         return Create(time, Notification.CreateOnCompleted<T>());
+    }
+
+    public static Recorded<Notification<T>> OnError<T>(long time)
+    {
+        return Create(time, Notification.CreateOnError<T>(new Exception()));
     }
 }

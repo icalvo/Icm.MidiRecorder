@@ -6,33 +6,29 @@ public static class MidiFileContext
         string formatString,
         IEnumerable<TMidiEvent> eventList,
         DateTime now,
-        Guid uniqueIdentifier,
-        Func<TMidiEvent, bool> isNote) =>
+        Guid uniqueIdentifier) where TMidiEvent: IMidiEvent =>
         StringExt.Format(
             formatString,
-            new FormatData<TMidiEvent>(now, eventList, uniqueIdentifier, isNote));
+            new FormatData<TMidiEvent>(now, eventList, uniqueIdentifier));
     
-    private class FormatData<TMidiEvent>
+    private class FormatData<TMidiEvent> where TMidiEvent : IMidiEvent
     {
         private readonly IEnumerable<TMidiEvent> _eventList;
-        private readonly Func<TMidiEvent, bool> _isNote;
         private readonly Dictionary<string, object?> _memoStore = new();
 
         public FormatData(
             DateTime now,
             IEnumerable<TMidiEvent> eventList,
-            Guid guid,
-            Func<TMidiEvent, bool> isNote)
+            Guid guid)
         {
             _eventList = eventList;
-            _isNote = isNote;
             Now = now;
             Guid = guid;
         }
 
         public DateTime Now { get; }
         public int NumberOfEvents => _eventList.Count();
-        public int NumberOfNoteEvents => Memoize(nameof(NumberOfNoteEvents), () => _eventList.Count(_isNote));
+        public int NumberOfNoteEvents => Memoize(nameof(NumberOfNoteEvents), () => _eventList.Count(e => e.IsNote));
         public Guid Guid { get; }
 
         private T? Memoize<T>(string key, Func<T> expression)
