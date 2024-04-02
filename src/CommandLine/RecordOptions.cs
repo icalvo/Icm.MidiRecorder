@@ -1,13 +1,14 @@
 using System.Diagnostics.CodeAnalysis;
 using CommandLine;
 using CommandLine.Text;
+using MidiRecorder.Application;
 
 namespace MidiRecorder.CommandLine;
 
 [SuppressMessage("ReSharper", "UnusedType.Global")]
 [SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
 [Verb("record", true, HelpText = "Records MIDI to files")]
-public class RecordOptions
+public class RecordOptions : IRecordOptions
 {
     public RecordOptions(IEnumerable<string> midiInputs, long delayToSave, string pathFormatString, int midiResolution)
     {
@@ -23,7 +24,7 @@ public class RecordOptions
     [Option(
         'd',
         "delay",
-        HelpText = "Delay (in milliseconds) before saving the latest recorded MIDI events",
+        HelpText = "Delay (in milliseconds) in silence before saving the latest recorded MIDI events",
         Default = 5000)]
     public long DelayToSave { get; }
 

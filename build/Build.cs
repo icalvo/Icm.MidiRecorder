@@ -1,17 +1,16 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using Nuke.Common;
 using Nuke.Common.CI;
 using Nuke.Common.CI.GitHubActions;
-using Nuke.Common.Git;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Utilities.Collections;
 using Octokit;
 using Serilog;
-using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
 [ShutdownDotNetAfterServerBuild]
@@ -19,17 +18,18 @@ using static Nuke.Common.Tools.DotNet.DotNetTasks;
     nameof(PublishNuGet),
     GitHubActionsImage.UbuntuLatest,
     AutoGenerate = true,
-    OnWorkflowDispatchRequiredInputs = new[] { nameof(Version) },
-    InvokedTargets = new[] { nameof(PublishNuGet) },
-    ImportSecrets = new[] { "NUGET_TOKEN", "GITHUB_TOKEN" })]
+    OnWorkflowDispatchRequiredInputs = [nameof(Version)],
+    InvokedTargets = [nameof(PublishNuGet)],
+    ImportSecrets = ["NUGET_TOKEN", "GITHUB_TOKEN"])]
 [GitHubActions(
     nameof(PullRequest),
     GitHubActionsImage.UbuntuLatest,
     AutoGenerate = true,
-    OnPullRequestBranches = new[] { "main" },
-    InvokedTargets = new[] { nameof(PullRequest) },
+    OnPullRequestBranches = ["main"],
+    InvokedTargets = [nameof(PullRequest)],
     EnableGitHubToken = true,
-    ImportSecrets = new[] { nameof(NugetToken) })]
+    ImportSecrets = [nameof(NugetToken)])]
+[SuppressMessage("ReSharper", "AllUnderscoreLocalParameterName")]
 class Build : NukeBuild
 {
     const string ChangelogFileName = "CHANGELOG.md";
@@ -39,7 +39,8 @@ class Build : NukeBuild
     readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
 
     [CI] readonly GitHubActions GitHubActions;
-    [GitRepository] readonly GitRepository GitRepository;
+
+    //[GitRepository] readonly GitRepository GitRepository;
 
     [Parameter] [Secret] readonly string NugetToken;
 
@@ -67,7 +68,7 @@ class Build : NukeBuild
             .Executes(() =>
             {
                 SourceDirectory.GlobDirectories("**/bin", "**/obj")
-                    .ForEach(DeleteDirectory);
+                    .ForEach(x => x.DeleteDirectory());
             });
 
     Target Restore =>
@@ -118,7 +119,7 @@ class Build : NukeBuild
             .Produces(PackageDirectory / "*.nupkg")
             .Executes(() =>
             {
-                EnsureCleanDirectory(PackageDirectory);
+                PackageDirectory.CreateOrCleanDirectory();
                 DotNetPack(s => s
                     .SetProject(TargetProjectDirectory)
                     .SetConfiguration(Configuration)

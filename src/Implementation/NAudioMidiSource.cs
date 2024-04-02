@@ -3,16 +3,16 @@ using NAudio.Midi;
 
 namespace MidiRecorder.Application.Implementation;
 
-public class NAudioMidiSource : IMidiSource<MidiEventWithPort>
+public class NAudioMidiSource : IMidiSource<NAudioMidiEvent>
 {
     private readonly MidiIn[] _midiIns;
 
     public NAudioMidiSource(TypedRecordOptions typedOptions)
     {
         var q = typedOptions.MidiInputs.Select(
-                inputId =>
+                input =>
                 {
-                    var midiIn = new MidiIn(inputId);
+                    var midiIn = new MidiIn(input.id);
                     var observable = Observable.FromEventPattern<MidiInMessageEventArgs>(
                             a => midiIn.MessageReceived += a,
                             a => midiIn.MessageReceived -= a)
@@ -20,9 +20,14 @@ public class NAudioMidiSource : IMidiSource<MidiEventWithPort>
                         .Select(
                             e =>
                             {
-                                var eventClone = e.MidiEvent.Clone();
+                                MidiEvent? eventClone = e.MidiEvent.Clone();
                                 eventClone.AbsoluteTime = e.Timestamp;
-                                return new MidiEventWithPort(eventClone, inputId);
+                                if (eventClone is NoteOnEvent non)
+                                {
+                                    non.NoteLength = 0;
+                                }
+
+                                return new NAudioMidiEvent(eventClone, input.id);
                             });
                     return (midiIn, observable);
                 })
@@ -40,7 +45,7 @@ public class NAudioMidiSource : IMidiSource<MidiEventWithPort>
         }
     }
 
-    public IObservable<MidiEventWithPort> AllEvents { get; }
+    public IObservable<NAudioMidiEvent> AllEvents { get; }
 
     public void Dispose()
     {

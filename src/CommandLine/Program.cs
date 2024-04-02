@@ -8,13 +8,14 @@ using MidiRecorder.Application;
 using MidiRecorder.Application.Implementation;
 using MidiRecorder.CommandLine;
 using MidiRecorder.CommandLine.Logging;
+using AssemblyExtensions = MidiRecorder.Application.AssemblyExtensions;
 
 const string environmentVarPrefix = "MidiRecorder_";
 IConfigurationRoot config = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, false)
     .AddEnvironmentVariables(environmentVarPrefix)
     .Build();
 
-using ILoggerFactory? loggerFactory = LoggerFactory.Create(
+using ILoggerFactory loggerFactory = LoggerFactory.Create(
     builder =>
     {
         builder.ClearProviders();
@@ -31,9 +32,23 @@ var parserResult = parser.ParseArguments<RecordOptions, ListMidiInputsOptions>(a
 
 try
 {
-    return parserResult.MapResult<RecordOptions, ListMidiInputsOptions, int>(
-        Record,
-        ListMidiInputs,
+    var appService = new ApplicationService<NAudioMidiEvent>(
+        NAudioMidiInputs.GetMidiInputs,
+        loggerFactory.CreateLogger<ApplicationService<NAudioMidiEvent>>(),
+        NAudioMidiInputs.SearchMidiInputId,
+        NAudioMidiFormatTester.TestFormat,
+        o => new NAudioMidiSource(o),
+        NAudioMidiTrackBuilder.BuildTracks,
+        NAudioMidiFileSaver.Save,
+        errorMessage =>
+        {
+            logger.LogCritical("{Message}", errorMessage);
+            DisplayHelp(parserResult, Enumerable.Empty<Error>());
+            return 1;
+        });
+    return parserResult.MapResult<IRecordOptions, ListMidiInputsOptions, int>(
+        appService.Record,
+        _ => appService.ListMidiInputs(),
         errors => DisplayHelp(parserResult, errors));
 }
 #pragma warning disable CA1031 Topmost catch to present exception
@@ -42,63 +57,6 @@ catch (Exception ex)
 {
     logger.LogCritical(ex.Demystify(), "{Message}", ex.Message);
     return 1;
-}
-
-int ListMidiInputs(ListMidiInputsOptions options)
-{
-    var midiInputService = new MidiInputService(loggerFactory.CreateLogger<MidiInputService>());
-    var midiInCapabilities = midiInputService.GetMidiInputs().ToArray();
-
-    if (!midiInCapabilities.Any())
-    {
-        logger.LogError("{Message}", "No MIDI inputs");
-    }
-
-    foreach ((MidiInput midiInput, int idx) x in midiInCapabilities.Select((midiInput, idx) => (midiInput, idx)))
-    {
-        Console.WriteLine($"{x.idx}. {x.midiInput.Name}");
-    }
-
-    return 0;
-}
-
-int Record(RecordOptions options)
-{
-    var midiInputService = new MidiInputService(loggerFactory.CreateLogger<MidiInputService>());
-    var validator = new OptionsValidator(midiInputService);
-    (TypedRecordOptions? typedOptions, var errorMessage) = validator.Validate(options);
-
-    if (typedOptions == null)
-    {
-        logger.LogCritical("{Message}", errorMessage);
-        DisplayHelp(parserResult, Enumerable.Empty<Error>());
-        return 1;
-    }
-
-    var sourceBuilder = new NAudioMidiSourceBuilder();
-    var saver = new NAudioMidiFileSaver();
-    var analyzer = new NAudioMidiEventAnalyzer();
-    var splitter = new MidiSplitter<MidiEventWithPort>();
-    var trackBuilder = new NAudioMidiTrackBuilder();
-    var formatTester = new NAudioMidiFormatTester(analyzer, loggerFactory.CreateLogger<NAudioMidiFormatTester>());
-    var svc = new MidiRecorderApplicationService<MidiEventWithPort>(
-        sourceBuilder,
-        loggerFactory.CreateLogger<MidiRecorderApplicationService<MidiEventWithPort>>(),
-        saver,
-        analyzer,
-        splitter,
-        trackBuilder,
-        formatTester);
-
-    using IDisposable? stopper = svc.StartRecording(typedOptions);
-    if (stopper == null)
-    {
-        return 1;
-    }
-
-    logger.LogInformation("Recording started, Press any key to quit");
-    Console.ReadLine();
-    return 0;
 }
 
 static int DisplayHelp<T>(ParserResult<T> result, IEnumerable<Error> errors)
@@ -128,11 +86,7 @@ static int DisplayHelp<T>(ParserResult<T> result, IEnumerable<Error> errors)
             h =>
             {
                 h.AdditionalNewLineAfterOption = false;
-                var assemblyDescription = Assembly.GetExecutingAssembly()
-                    .GetCustomAttributes(typeof(AssemblyDescriptionAttribute), false)
-                    .OfType<AssemblyDescriptionAttribute>()
-                    .FirstOrDefault()
-                    ?.Description;
+                var assemblyDescription = AssemblyExtensions.Get<AssemblyDescriptionAttribute>()?.Description;
                 if (errs.IsHelp())
                 {
                     h.AddPreOptionsLine(assemblyDescription);

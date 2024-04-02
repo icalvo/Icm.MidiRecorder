@@ -5,11 +5,11 @@ public record TypedRecordOptions(
     TimeSpan TimeoutToSave,
     string PathFormatString,
     int MidiResolution,
-    IEnumerable<int> MidiInputs)
+    IEnumerable<(int id, string name)> MidiInputs)
 {
     public override string ToString()
     {
         return
-            $"{{ delayToSave = {DelayToSave}, timeoutToSave = {TimeoutToSave}, pathFormatString = {PathFormatString}, midiResolution = {MidiResolution} }}";
+            $"{{ timeToSaveAfterAllOff = {DelayToSave}, timeToSaveAfterHeldEvents = {TimeoutToSave}, pathFormatString = {PathFormatString}, midiResolution = {MidiResolution} }}";
     }
 }

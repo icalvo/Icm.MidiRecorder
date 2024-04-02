@@ -1,36 +1,22 @@
-using Microsoft.Extensions.Logging;
+using LanguageExt;
 using NAudio.Midi;
 
 namespace MidiRecorder.Application.Implementation;
 
-public class NAudioMidiFormatTester : IFormatTester
+public static class NAudioMidiFormatTester
 {
-    private readonly IMidiEventAnalyzer<MidiEventWithPort> _analyzer;
-    private readonly ILogger<NAudioMidiFormatTester> _logger;
-
-    public NAudioMidiFormatTester(
-        IMidiEventAnalyzer<MidiEventWithPort> analyzer,
-        ILogger<NAudioMidiFormatTester> logger)
+    public static Validation<string, Unit> TestFormat(string pathFormatString)
     {
-        _analyzer = analyzer;
-        _logger = logger;
-    }
-
-    public bool TestFormat(string pathFormatString)
-    {
-        var eventList = new[] { new MidiEventWithPort(new NoteOnEvent(11, 1, 78, 34, 333), 0) };
-
-        var context = new MidiFileContext<MidiEventWithPort>(eventList, DateTime.Now, Guid.NewGuid(), _analyzer);
-
+        var eventList = new[] { new NAudioMidiEvent(new NoteOnEvent(11, 1, 78, 34, 333), 0) };
+        
         try
         {
-            _ = context.BuildFilePath(pathFormatString);
-            return true;
+            _ = MidiFileContext.BuildFilePath(pathFormatString, eventList, DateTime.Now, Guid.NewGuid());
+            return Prelude.unit;
         }
         catch (Exception ex)
         {
-            _logger.LogError("Output path format (-f) error: {Message}", ex.Message);
-            return false;
+            return ex.Message;
         }
     }
 }
